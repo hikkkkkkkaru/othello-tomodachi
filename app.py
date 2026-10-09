@@ -5,23 +5,49 @@ from teams.my_agent import MyAgent, WEIGHT_MAP
 
 st.set_page_config(page_title="オセロAI対戦", layout="centered")
 
-# --- 画面の見栄えを良くする設定 ---
+# --- 🎯ここが新しいデザイン（CSS）の設定です🎯 ---
 st.markdown("""
 <style>
+/* 1. マス目同士の隙間を消して盤面を密着させる */
+[data-testid="column"] {
+    padding: 0 !important;
+    min-width: 0 !important;
+}
+[data-testid="stHorizontalBlock"] {
+    gap: 0 !important;
+}
+
+/* 2. マス目（ボタン）を本物のフェルトマット風に */
 div[data-testid="stButton"] > button {
-    background-color: #008000 !important;
-    border: 1px solid #005000 !important;
-    color: white !important;
-    font-size: 28px !important;
-    height: 60px !important;
-    width: 100% !important;
+    background-color: #0b5e2a !important; /* 深みのあるマットな緑 */
+    border: 1px solid #000000 !important; /* マスの黒い枠線 */
+    border-radius: 0px !important;        /* ボタンの丸みを完全に消して四角にする */
+    height: 60px !important;              /* マスの高さを固定 */
+    width: 100% !important;               /* 幅を最大に */
+    padding: 0 !important;
+    box-shadow: inset 0px 0px 10px rgba(0,0,0,0.5) !important; /* 内側に影を入れて質感を出す */
+    transition: all 0.2s ease;
+}
+
+/* 3. マウスを乗せた時のハイライト（打てる場所が光る） */
+div[data-testid="stButton"] > button:hover {
+    background-color: #168c41 !important;
+    border: 1px solid #ffeb3b !important; /* 枠を黄色く光らせる */
+    z-index: 1;
+}
+
+/* 4. コマ（⚫⚪）に影をつけて立体的に見せる */
+div[data-testid="stButton"] > button p {
+    font-size: 42px !important;           /* コマをギリギリまで大きく */
+    margin: 0 !important;
+    text-shadow: 2px 4px 5px rgba(0,0,0,0.7); /* コマの下に影を落として浮かせる */
 }
 </style>
 """, unsafe_allow_html=True)
+# ------------------------------------------------
 
 st.title("⚫ オセロ対戦 vs 自作AI ⚪")
 
-# 4つのレベルを選択可能にする
 level = st.selectbox("AIの強さを選んでください", [
     "初級 (ステップ1: マスの点数だけで選ぶ)",
     "中級 (ステップ2: ひっくり返した後の盤面を見る)",
@@ -64,6 +90,8 @@ if not legal_moves:
     st.rerun()
 
 st.write("---")
+
+# 盤面の描画
 for r in range(8):
     cols = st.columns(8)
     for c in range(8):
@@ -74,14 +102,16 @@ for r in range(8):
             elif piece == -1:
                 st.button("⚪", key=f"W_{r}_{c}", disabled=True)
             elif player == 1 and (r, c) in legal_moves:
-                if st.button("➕", key=f"btn_{r}_{c}"):
+                # ➕マークだとダサいので、控えめな「・」に変更
+                if st.button("・", key=f"btn_{r}_{c}"):
                     st.session_state.board = apply_move(board, 1, (r, c))
                     st.session_state.current_player = -1
                     st.rerun()
             else:
+                # 何もないマス
                 st.button(" ", key=f"E_{r}_{c}", disabled=True)
 
-# --- AI（白番）のターン処理と全レベル分岐 ---
+# --- AI（白番）のターン処理 ---
 if player == -1:
     with st.spinner("AIが考え中..."):
         time.sleep(0.5)
@@ -98,7 +128,6 @@ if player == -1:
             best_score = -99999
             for move in legal_moves:
                 after = apply_move(board, -1, move)
-                # 簡略化したスコア計算
                 score = sum(WEIGHT_MAP[r][c] for r in range(8) for c in range(8) if after[r][c] == -1) - sum(WEIGHT_MAP[r][c] for r in range(8) for c in range(8) if after[r][c] == 1)
                 if score > best_score:
                     best_score = score
@@ -123,7 +152,6 @@ if player == -1:
                     best_move = move
                     
         else:
-            # 超上級：提出用の my_agent.py（α-β探索）を呼び出す
             best_move = st.session_state.ai.choose(board, -1, legal_moves)
 
         st.session_state.board = apply_move(board, -1, best_move)
